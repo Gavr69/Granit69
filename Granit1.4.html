@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CRM Памятники</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: #f5f6fa; color: #333; }
+        
+        #login-screen {
+            display: flex; justify-content: center; align-items: center; min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary), var(--secondary)); padding: 20px;
+        }
+        .login-box {
+            background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%; max-width: 380px; text-align: center;
+        }
+        .login-box input {
+            width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px;
+        }
+        .btn {
+            padding: 14px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;
+            transition: 0.2s; width: 100%; font-size: 16px; text-align: center;
+        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #2980b9; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; width: auto; padding: 8px 12px; font-size: 14px;}
+        .btn-secondary { background: #95a5a6; color: white; width: auto; padding: 8px 12px; font-size: 14px;}
+        .btn-sm { padding: 6px 12px; font-size: 13px; width: auto; }
+
+        #app { display: none; height: 100vh; overflow: hidden; }
+        .sidebar {
+            width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column;
+            position: fixed; height: 100%; z-index: 100; transition: transform 0.3s ease;
+        }
+        .sidebar-header { padding: 20px; font-size: 1.2em; font-weight: bold; border-bottom: 1px solid var(--secondary); display: flex; justify-content: space-between; align-items: center; }
+        .user-info { padding: 15px 20px; background: var(--secondary); font-size: 0.9em; }
+        .nav-item {            padding: 16px 20px; cursor: pointer; transition: 0.2s; border-left: 4px solid transparent; font-size: 15px;
+        }
+        .nav-item:hover, .nav-item.active { background: var(--secondary); border-left-color: var(--accent); }
+        
+        .main-content { 
+            margin-left: 260px; padding: 20px; overflow-y: auto; height: 100vh; width: calc(100% - 260px);
+        }
+        
+        .view-header {
+            display: flex; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap;
+        }
+        .menu-toggle { 
+            display: none; background: none; border: none; color: var(--primary); font-size: 26px; cursor: pointer; padding: 5px; 
+        }
+
+        .dashboard-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            cursor: pointer; transition: 0.2s; text-align: center; border: 1px solid #eee;
+        }
+        .stat-card:active { transform: scale(0.98); }
+        .stat-number { font-size: 2.2em; font-weight: bold; color: var(--accent); }
+        .stat-label { color: #7f8c8d; margin-top: 5px; font-size: 0.9em; }
+        .stat-card.urgent .stat-number { color: var(--danger); }
+        .stat-card.ready .stat-number { color: var(--success); }
+        .stat-card.overdue { border: 2px solid var(--danger); background: #fdf2f2; }
+        .stat-card.overdue .stat-number { color: var(--danger); }
+
+        .history-panel {
+            background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .history-item {
+            padding: 12px; border-bottom: 1px solid #eee; font-size: 0.9em; line-height: 1.5;
+        }
+        .history-item:last-child { border-bottom: none; }
+        .history-time { color: #95a5a6; font-size: 0.8em; margin-right: 8px; white-space: nowrap; display: block; margin-bottom: 4px;}
+
+        .search-bar {
+            display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .search-bar input, .search-bar select {
+            padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px;
+        }
+        .search-bar input[type="text"] { flex: 1; min-width: 200px; }
+        .search-bar select { min-width: 160px; background: white; }
+        .search-bar input[type="date"] { min-width: 140px; background: white; }
+
+        .order-list { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }        .order-item {
+            padding: 16px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; gap: 10px;
+            cursor: pointer; transition: 0.2s; position: relative;
+        }
+        .order-item:hover { background: #f8f9fa; }
+        .order-item.unread { font-weight: bold; background: #eaf2f8; }
+        .order-item.unread::before {
+            content: "🔔"; position: absolute; top: 16px; right: 16px; font-size: 1.2em;
+        }
+        .order-top { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
+        .order-title { font-size: 1.05em; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;}
+        .order-meta { font-size: 0.85em; color: #7f8c8d; font-weight: normal; }
+        .order-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+        
+        .progress-container { width: 100%; max-width: 120px; }
+        .progress-bar { height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+        
+        .status-badge {
+            padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: bold; text-transform: uppercase; white-space: nowrap;
+        }
+        .status-new { background: #d5dbdb; color: #2c3e50; }
+        .status-accepted { background: #f9e79f; color: #7d6608; }
+        .status-manufacturing { background: #aed6f1; color: #154360; }
+        .status-engraving { background: #d2b4de; color: #4a235a; }
+        .status-ready { background: #abebc6; color: #145a32; }
+        .status-closed { background: #95a5a6; color: white; }
+        .badge-overdue { background: var(--danger); color: white; animation: pulse 2s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000;
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            background: white; width: 95%; max-width: 800px; max-height: 90vh; border-radius: 12px;
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            padding: 16px 20px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .close-btn { background: none; border: none; color: white; font-size: 28px; cursor: pointer; line-height: 1; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9em; color: #555; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px;        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+        .checkbox-group input { width: 20px; height: 20px; cursor: pointer; }
+        .checkbox-group label { cursor: pointer; margin: 0; font-weight: normal; }
+
+        .permission-box {
+            background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; margin-top: 10px;
+        }
+        .permission-box h4 { margin-top: 0; margin-bottom: 15px; font-size: 1em; color: var(--primary); border-bottom: 1px solid #ddd; padding-bottom: 8px;}
+        .perm-section { margin-bottom: 15px; }
+        .perm-section-title { font-weight: bold; display: block; margin-bottom: 8px; font-size: 0.95em; color: #333; }
+
+        .tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 20px; overflow-x: auto; }
+        .tab { padding: 12px 20px; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; font-weight: 500; }
+        .tab.active { border-bottom-color: var(--accent); color: var(--accent); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .chat-box { height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 15px; margin-bottom: 15px; background: #fafafa; border-radius: 8px; }
+        .chat-message { margin-bottom: 12px; padding: 12px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); max-width: 85%; }
+        .chat-message.me { margin-left: auto; background: #d5f5e3; }
+        .chat-header { font-size: 0.8em; color: #7f8c8d; margin-bottom: 6px; display: flex; justify-content: space-between; }
+        .chat-input { display: flex; gap: 10px; }
+        .chat-input input { flex: 1; }
+        
+        .hidden { display: none !important; }
+
+        #print-area { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area {
+                display: block; position: absolute; left: 0; top: 0; width: 100%; padding: 20px;
+                font-family: 'Times New Roman', serif; color: black; background: white;
+            }
+            .print-header { text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
+            .print-section { margin-bottom: 20px; }
+            .print-section h3 { border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-bottom: 10px; font-size: 16px; text-transform: uppercase; }
+            .print-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+            .print-label { font-weight: bold; }
+            .print-signatures { margin-top: 50px; display: flex; justify-content: space-between; }
+            .sig-line { border-top: 1px solid black; width: 40%; text-align: center; padding-top: 5px; font-size: 12px; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); width: 280px; }            .sidebar.open { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.3); }
+            .main-content { margin-left: 0; width: 100%; padding: 15px; }
+            .menu-toggle { display: block !important; }
+            .form-row { grid-template-columns: 1fr; }
+            .dashboard-grid { grid-template-columns: 1fr 1fr; }
+            .modal-content { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+            .modal-header { padding: 15px; }
+            .modal-body { padding: 15px; }
+            .order-top { flex-direction: column; gap: 8px; }
+            .progress-container { max-width: 100%; margin-top: 5px; }
+            .chat-message { max-width: 95%; }
+        }
+        
+        @media (max-width: 480px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .search-bar { flex-direction: column; }
+            .search-bar input, .search-bar select { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <div class="login-box">
+            <h2 style="margin-top: 0;">CRM Памятники</h2>
+            <input type="text" id="login-username" placeholder="Логин">
+            <input type="password" id="login-password" placeholder="Пароль">
+            <button class="btn btn-primary" onclick="login()">Войти в систему</button>
+            <p id="login-error" style="color: var(--danger); font-size: 0.9em; margin-top: 10px; display: none;">Неверный логин или пароль</p>
+        </div>
+    </div>
+
+    <div id="app">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span>CRM Памятники</span>
+                <span style="cursor: pointer; font-size: 1.5em;" onclick="toggleSidebar()">✕</span>
+            </div>
+            <div class="user-info">
+                <div id="current-user-name" style="font-weight: bold;">Пользователь</div>
+                <div id="current-user-role" style="font-size: 0.85em; opacity: 0.8; margin-top: 4px;">Роль</div>
+                <div id="current-user-perms" style="font-size: 0.75em; opacity: 0.6; margin-top: 4px; font-style: italic;"></div>
+            </div>
+            <div class="nav-item active" onclick="showView('dashboard'); toggleSidebar()">📊 Дашборд</div>
+            <div class="nav-item" onclick="showView('orders'); toggleSidebar()">📋 Все заказы</div>
+            <div class="nav-item" onclick="openOrderModal(); toggleSidebar()">➕ Новый заказ</div>
+            <div class="nav-item" id="admin-link" style="display: none;" onclick="showView('admin'); toggleSidebar()">⚙️ Пользователи</div>
+            <div class="nav-item" style="margin-top: auto;" onclick="logout()">🚪 Выход</div>
+        </div>
+        <div class="main-content">
+            <div id="view-dashboard">
+                <div class="view-header">
+                    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+                    <h2 style="margin: 0;">Дашборд</h2>
+                </div>
+                <div class="dashboard-grid">
+                    <div class="stat-card" onclick="filterOrders('new')">
+                        <div class="stat-number" id="count-new">0</div>
+                        <div class="stat-label">Новые</div>
+                    </div>
+                    <div class="stat-card" onclick="filterOrders('accepted')">
+                        <div class="stat-number" id="count-accepted">0</div>
+                        <div class="stat-label">В работе</div>
+                    </div>
+                    <div class="stat-card ready" onclick="filterOrders('ready')">
+                        <div class="stat-number" id="count-ready">0</div>
+                        <div class="stat-label">Готовые</div>
+                    </div>
+                    <div class="stat-card urgent" onclick="filterOrders('urgent')">
+                        <div class="stat-number" id="count-urgent">0</div>
+                        <div class="stat-label">Горящие</div>
+                    </div>
+                    <div class="stat-card overdue" onclick="filterOrders('overdue')">
+                        <div class="stat-number" id="count-overdue">0</div>
+                        <div class="stat-label">🔥 Просроченные</div>
+                    </div>
+                    <div class="stat-card" onclick="filterOrders('closed')">
+                        <div class="stat-label" style="font-size: 1.1em; font-weight: bold; margin-top: 15px;">📁 Архив</div>
+                    </div>
+                </div>
+                <div class="history-panel">
+                    <h3 style="margin-top: 0;">📜 Последние изменения</h3>
+                    <div id="history-list"></div>
+                </div>
+            </div>
+
+            <div id="view-orders" class="hidden">
+                <div class="view-header">
+                    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+                    <h2 id="orders-title" style="margin: 0;">Список заказов</h2>
+                    <button class="btn btn-secondary btn-sm" style="margin-left: auto;" onclick="showView('dashboard')">← Назад</button>
+                </div>
+                <div class="search-bar">
+                    <input type="text" id="global-search" placeholder="🔍 Поиск: ФИО, телефон, камень, №..." oninput="applyFilters()">
+                    <select id="filter-status" onchange="applyFilters()">
+                        <option value="all">Все статусы</option>
+                        <option value="new">Новые</option>
+                        <option value="accepted">Принят в работу</option>
+                        <option value="manufacturing">На изготовлении</option>                        <option value="engraving">Граверные работы</option>
+                        <option value="ready">Готов</option>
+                        <option value="closed">Закрыт (Архив)</option>
+                        <option value="overdue">🔥 Просроченные</option>
+                    </select>
+                    <input type="date" id="filter-date-from" placeholder="Дата от" onchange="applyFilters()" title="Дата изготовления от">
+                    <input type="date" id="filter-date-to" placeholder="Дата до" onchange="applyFilters()" title="Дата изготовления до">
+                </div>
+                <div class="order-list" id="orders-container"></div>
+            </div>
+
+            <div id="view-admin" class="hidden">
+                <div class="view-header">
+                    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+                    <h2 style="margin: 0;">Управление пользователями</h2>
+                </div>
+                <div class="history-panel">
+                    <h3 style="margin-top: 0; font-size: 1.1em;" id="user-form-title">Создание нового пользователя</h3>
+                    <input type="hidden" id="editing-user-id">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Логин (для входа) *</label>
+                            <input type="text" id="new-user-login" placeholder="Например: ivanov">
+                        </div>
+                        <div class="form-group">
+                            <label>Пароль *</label>
+                            <input type="text" id="new-user-pass" placeholder="Придумайте пароль">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>ФИО / Название должности *</label>
+                        <input type="text" id="new-user-name" placeholder="Например: Менеджер Иванов">
+                    </div>
+                    
+                    <div class="permission-box">
+                        <h4>⚙️ Права доступа:</h4>
+                        <div class="perm-section">
+                            <span class="perm-section-title">👁️ Просмотр заказ-нарядов:</span>
+                            <div class="checkbox-group">
+                                <input type="radio" name="perm-view" id="perm-view-own" value="own" checked>
+                                <label for="perm-view-own">Видеть <b>только свои</b> созданные заказы</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="radio" name="perm-view" id="perm-view-all" value="all">
+                                <label for="perm-view-all">Видеть <b>все</b> заказы в системе</label>
+                            </div>
+                        </div>
+                        <div class="perm-section">
+                            <span class="perm-section-title">✏️ Редактирование заказ-нарядов:</span>
+                            <div class="checkbox-group">                                <input type="radio" name="perm-edit" id="perm-edit-own" value="own" checked>
+                                <label for="perm-edit-own">Редактировать <b>только свои</b> заказы</label>
+                            </div>
+                            <div class="checkbox-group">
+                                <input type="radio" name="perm-edit" id="perm-edit-all" value="all">
+                                <label for="perm-edit-all">Редактировать <b>любые</b> заказы в системе</label>
+                            </div>
+                        </div>
+                        <div class="perm-section" style="border-top: 1px solid #ddd; padding-top: 15px; margin-top: 15px;">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="perm-manage-users">
+                                <label for="perm-manage-users"><b>Управлять пользователями</b> (полный доступ к разделу)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button class="btn btn-success" style="flex: 1;" onclick="saveUser()">💾 Сохранить</button>
+                        <button class="btn btn-secondary" style="flex: 1; display: none;" id="cancel-edit-btn" onclick="resetUserForm()">Отмена</button>
+                    </div>
+
+                    <h3 style="margin-top: 30px; font-size: 1.1em;">Список сотрудников</h3>
+                    <div id="users-list" style="margin-top: 15px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="order-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title" style="margin: 0; font-size: 1.2em;">Заказ-наряд</h3>
+                <button class="close-btn" onclick="closeOrderModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('details')">📝 Детали</div>
+                    <div class="tab" onclick="switchTab('chat')">💬 Чат и Файлы</div>
+                    <div class="tab" onclick="switchTab('history-tab')">📜 История</div>
+                </div>
+
+                <div id="tab-details" class="tab-content active">
+                    <form id="order-form">
+                        <input type="hidden" id="order-id">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Номер заказ-наряда</label>
+                                <input type="text" id="order-number" placeholder="Оставьте пустым для авто-генерации">
+                            </div>
+                            <div class="form-group">                                <label>Дата изготовления *</label>
+                                <input type="date" id="manufacture-date" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>ФИО Заказчика *</label>
+                                <input type="text" id="customer-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Телефон</label>
+                                <input type="tel" id="customer-phone" placeholder="+7 (___) ___-__-__">
+                            </div>
+                        </div>
+
+                        <h4 style="border-bottom: 1px solid #eee; padding-bottom: 5px;">Комплектация</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Размер Стеллы</label>
+                                <input type="text" id="stele-size" placeholder="напр. 100х50х8">
+                            </div>
+                            <div class="form-group">
+                                <label>Подставка</label>
+                                <input type="text" id="base-size" placeholder="напр. 50х20х15">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Плита/Надгробка и размеры</label>
+                                <input type="text" id="slab-size">
+                            </div>
+                            <div class="form-group">
+                                <label>Наименование камня</label>
+                                <input type="text" id="stone-name" placeholder="напр. Габбро-диабаз">
+                            </div>
+                        </div>
+
+                        <h4 style="border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px;">Граверные работы (1)</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>ФИО на гравировке *</label>
+                                <input type="text" id="eng-name-1" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Шрифт</label>
+                                <input type="text" id="eng-font-1">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">                                <label>Дата рождения</label>
+                                <input type="date" id="eng-dob-1">
+                            </div>
+                            <div class="form-group">
+                                <label>Дата смерти</label>
+                                <input type="date" id="eng-dod-1">
+                            </div>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="eng-cross-1">
+                            <label for="eng-cross-1">Наличие крестика</label>
+                        </div>
+
+                        <button type="button" class="btn btn-secondary btn-sm" style="width: auto; margin-bottom: 15px;" onclick="toggleSecondEngraving()">+ Добавить вторую гравировку</button>
+                        
+                        <div id="engraving-2" class="hidden">
+                            <h4 style="border-bottom: 1px solid #eee; padding-bottom: 5px;">Граверные работы (2)</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>ФИО на гравировке</label>
+                                    <input type="text" id="eng-name-2">
+                                </div>
+                                <div class="form-group">
+                                    <label>Шрифт</label>
+                                    <input type="text" id="eng-font-2">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Дата рождения</label>
+                                    <input type="date" id="eng-dob-2">
+                                </div>
+                                <div class="form-group">
+                                    <label>Дата смерти</label>
+                                    <input type="date" id="eng-dod-2">
+                                </div>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="eng-cross-2">
+                                <label for="eng-cross-2">Наличие крестика</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Особые отметки</label>
+                            <textarea id="special-notes" rows="3" placeholder="Дополнительная информация для производства..."></textarea>
+                        </div>
+
+                        <div class="form-group" id="new-order-files-group">
+                            <label>📎 Прикрепить фото/файлы к заказу (макс. 200 МБ)</label>                            <input type="file" id="initial-file-input" multiple onchange="handleInitialFileUpload(this)" style="padding: 10px; background: #f8f9fa;">
+                            <div id="temp-files-list" style="margin-top: 10px;"></div>
+                        </div>
+
+                        <div class="form-group" id="status-group">
+                            <label>Статус изготовления</label>
+                            <select id="order-status">
+                                <option value="new">Новый (не принят)</option>
+                                <option value="accepted">1. Принят в работу</option>
+                                <option value="manufacturing">2. На изготовлении</option>
+                                <option value="engraving">3. Граверные работы</option>
+                                <option value="ready">4. Готов</option>
+                                <option value="closed">Закрыт (Архив)</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px;" id="order-action-buttons">
+                            <button type="button" class="btn btn-success" style="flex: 1; min-width: 150px;" onclick="saveOrder()">💾 Сохранить</button>
+                            <button type="button" class="btn btn-primary" style="flex: 1; min-width: 150px;" onclick="printOrder()">🖨 Печать</button>
+                            <button type="button" class="btn btn-danger" id="delete-order-btn" style="display: none; flex: 1; min-width: 150px;" onclick="deleteOrder()">🗑 Удалить</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="tab-chat" class="tab-content">
+                    <div class="form-group">
+                        <label>Добавить файл/фото (макс. 200 МБ)</label>
+                        <input type="file" id="file-input" onchange="handleFileUpload(this)" style="padding: 10px; background: #f8f9fa;">
+                    </div>
+                    <div id="files-list" style="margin-bottom: 20px;"></div>
+                    <div class="chat-box" id="chat-box"></div>
+                    <div class="chat-input">
+                        <input type="text" id="chat-message" placeholder="Введите сообщение..." onkeypress="if(event.key==='Enter') sendMessage()">
+                        <button class="btn btn-primary" style="width: auto;" onclick="sendMessage()">➤</button>
+                    </div>
+                </div>
+
+                <div id="tab-history-tab" class="tab-content">
+                    <div id="order-history-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="print-area"></div>
+
+    <script>
+        let currentUser = null;
+        let orders = JSON.parse(localStorage.getItem('crm_orders')) || [];
+        let tempFiles = [];        
+        let defaultUsers = [
+            { id: '1', username: 'admin', password: 'admin', name: 'Главный Администратор', permissions: { viewAll: true, editAll: true, manageUsers: true } },
+            { id: '2', username: 'production', password: 'production', name: 'Цех Производства', permissions: { viewAll: true, editAll: true, manageUsers: false } },
+            { id: '3', username: 'fadeeva', password: '123', name: 'Офис Фадеева', permissions: { viewAll: false, editAll: false, manageUsers: false } },
+            { id: '4', username: 'semerka', password: '123', name: 'Офис Семёрка', permissions: { viewAll: false, editAll: false, manageUsers: false } }
+        ];
+        let users = JSON.parse(localStorage.getItem('crm_users')) || defaultUsers;
+
+        function login() {
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+            const user = users.find(x => x.username === u && x.password === p);
+            
+            if (user) {
+                currentUser = user;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app').style.display = 'flex';
+                document.getElementById('current-user-name').textContent = user.name;
+                
+                let permText = [];
+                permText.push(user.permissions.viewAll ? "Видит: Все" : "Видит: Только свои");
+                permText.push(user.permissions.editAll ? "Ред.: Все" : "Ред.: Только свои");
+                if (user.permissions.manageUsers) permText.push("Админ");
+                
+                document.getElementById('current-user-role').textContent = user.username;
+                document.getElementById('current-user-perms').textContent = "Права: " + permText.join(" | ");
+
+                if (user.permissions.manageUsers) document.getElementById('admin-link').style.display = 'block';
+                else document.getElementById('admin-link').style.display = 'none';
+                
+                updateDashboard();
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-error').style.display = 'none';
+        }
+
+        function toggleSidebar() {
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.toggle('open');
+            }        }
+
+        function showView(viewName) {
+            document.querySelectorAll('.main-content > div').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+            
+            const navItems = document.querySelectorAll('.nav-item');
+            if(viewName === 'dashboard') navItems[0].classList.add('active');
+            if(viewName === 'orders') navItems[1].classList.add('active');
+            if(viewName === 'admin') navItems[3].classList.add('active');
+
+            if (viewName === 'dashboard') updateDashboard();
+            if (viewName === 'orders') {
+                document.getElementById('global-search').value = '';
+                document.getElementById('filter-status').value = 'all';
+                document.getElementById('filter-date-from').value = '';
+                document.getElementById('filter-date-to').value = '';
+                applyFilters();
+            }
+            if (viewName === 'admin') {
+                resetUserForm();
+                renderAdminPanel();
+            }
+        }
+
+        function filterOrders(filter) {
+            showView('orders');
+            document.getElementById('filter-status').value = filter;
+            applyFilters();
+        }
+
+        function getVisibleOrders() {
+            if (currentUser.permissions.viewAll) return orders;
+            return orders.filter(o => o.creatorId === currentUser.id);
+        }
+
+        function isOverdue(order) {
+            if (order.status === 'closed' || order.status === 'ready') return false;
+            const mDate = new Date(order.manufactureDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return mDate < today;
+        }
+
+        // --- Функция для детального сравнения изменений ---
+        function getOrderChanges(oldOrder, newOrder) {
+            const changes = [];
+            const getVal = (obj, path) => {                return path.split('.').reduce((o, i) => (o ? o[i] : undefined), obj);
+            };
+
+            const compare = (path, label) => {
+                let oldVal = getVal(oldOrder, path);
+                let newVal = getVal(newOrder, path);
+                
+                // Преобразуем boolean в читаемый вид для крестиков
+                if (path.includes('hasCross')) {
+                    oldVal = oldVal ? 'Да' : 'Нет';
+                    newVal = newVal ? 'Да' : 'Нет';
+                }
+                
+                const oldStr = oldVal !== undefined && oldVal !== '' ? String(oldVal) : 'Не указано';
+                const newStr = newVal !== undefined && newVal !== '' ? String(newVal) : 'Не указано';
+                
+                if (oldStr !== newStr) {
+                    changes.push(`<b>${label}</b>: "${oldStr}" → "${newStr}"`);
+                }
+            };
+
+            compare('orderNumber', 'Номер заказа');
+            compare('customerName', 'ФИО Заказчика');
+            compare('phone', 'Телефон');
+            compare('manufactureDate', 'Дата изготовления');
+            compare('status', 'Статус');
+            compare('specialNotes', 'Особые отметки');
+            
+            compare('monument.steleSize', 'Размер стеллы');
+            compare('monument.base', 'Подставка');
+            compare('monument.slabSize', 'Плита/Надгробка');
+            compare('monument.stoneName', 'Камень');
+            
+            compare('engraving1.name', 'Гравировка 1 ФИО');
+            compare('engraving1.font', 'Гравировка 1 Шрифт');
+            compare('engraving1.dob', 'Гравировка 1 Д.Р.');
+            compare('engraving1.dod', 'Гравировка 1 Д.С.');
+            compare('engraving1.hasCross', 'Гравировка 1 Крестик');
+            
+            if (oldOrder.engraving2 || newOrder.engraving2) {
+                compare('engraving2.name', 'Гравировка 2 ФИО');
+                compare('engraving2.font', 'Гравировка 2 Шрифт');
+                compare('engraving2.dob', 'Гравировка 2 Д.Р.');
+                compare('engraving2.dod', 'Гравировка 2 Д.С.');
+                compare('engraving2.hasCross', 'Гравировка 2 Крестик');
+            }
+
+            return changes;
+        }
+        function updateDashboard() {
+            const visible = getVisibleOrders();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const newCount = visible.filter(o => o.status === 'new').length;
+            const acceptedCount = visible.filter(o => ['accepted', 'manufacturing', 'engraving'].includes(o.status)).length;
+            const readyCount = visible.filter(o => o.status === 'ready').length;
+            
+            const urgentCount = visible.filter(o => {
+                if (o.status === 'closed' || o.status === 'ready') return false;
+                const mDate = new Date(o.manufactureDate);
+                const diffTime = mDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays <= 14 && diffDays >= 0;
+            }).length;
+
+            const overdueCount = visible.filter(o => isOverdue(o)).length;
+
+            document.getElementById('count-new').textContent = newCount;
+            document.getElementById('count-accepted').textContent = acceptedCount;
+            document.getElementById('count-ready').textContent = readyCount;
+            document.getElementById('count-urgent').textContent = urgentCount;
+            document.getElementById('count-overdue').textContent = overdueCount;
+
+            const historyContainer = document.getElementById('history-list');
+            historyContainer.innerHTML = '';
+            
+            let allHistory = [];
+            visible.forEach(o => {
+                o.history.forEach(h => {
+                    allHistory.push({ ...h, orderId: o.id, orderName: o.engraving1?.name || o.customerName || 'Без имени' });
+                });
+            });
+            
+            allHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            allHistory.slice(0, 15).forEach(h => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                // action теперь может содержать HTML (разрывы строк) для детального отображения
+                div.innerHTML = `<span class="history-time">${new Date(h.date).toLocaleString()}</span> <b>${h.userName}</b>: ${h.action} <br><span style="color: var(--accent); cursor: pointer; text-decoration: underline;" onclick="openOrderModal('${h.orderId}')">📄 Открыть заказ: ${h.orderName}</span>`;
+                historyContainer.appendChild(div);
+            });
+        }
+
+        function applyFilters() {
+            const searchText = document.getElementById('global-search').value.toLowerCase().trim();
+            const statusFilter = document.getElementById('filter-status').value;
+            const dateFrom = document.getElementById('filter-date-from').value;            const dateTo = document.getElementById('filter-date-to').value;
+            
+            let filtered = getVisibleOrders();
+            
+            if (searchText) {
+                filtered = filtered.filter(o => {
+                    const searchFields = [
+                        o.orderNumber, o.customerName, o.phone,
+                        o.engraving1?.name, o.engraving2?.name,
+                        o.monument?.stoneName, o.monument?.steleSize
+                    ].filter(Boolean).join(' ').toLowerCase();
+                    return searchFields.includes(searchText);
+                });
+            }
+
+            // Фильтрация по дате изготовления
+            if (dateFrom) {
+                filtered = filtered.filter(o => o.manufactureDate >= dateFrom);
+            }
+            if (dateTo) {
+                filtered = filtered.filter(o => o.manufactureDate <= dateTo);
+            }
+            
+            if (statusFilter !== 'all') {
+                if (statusFilter === 'overdue') {
+                    filtered = filtered.filter(o => isOverdue(o));
+                } else if (statusFilter === 'accepted') {
+                    filtered = filtered.filter(o => ['accepted', 'manufacturing', 'engraving'].includes(o.status));
+                } else {
+                    filtered = filtered.filter(o => o.status === statusFilter);
+                }
+            }
+            
+            const titles = {
+                'all': 'Все заказы', 'new': 'Новые заказы', 'accepted': 'В работе', 
+                'ready': 'Готовые', 'urgent': 'Горящие', 'overdue': '🔥 Просроченные', 'closed': 'Архив'
+            };
+            
+            let title = titles[statusFilter] || 'Результаты поиска';
+            if (dateFrom || dateTo) {
+                title += ` (Дата: ${dateFrom || '...'} — ${dateTo || '...'})`;
+            }
+            document.getElementById('orders-title').textContent = title;
+            
+            renderOrdersList(filtered);
+        }
+
+        function renderOrdersList(list) {
+            const container = document.getElementById('orders-container');
+            container.innerHTML = '';            
+            if (list.length === 0) {
+                container.innerHTML = '<div style="padding: 30px; text-align: center; color: #7f8c8d;">Заказов не найдено</div>';
+                return;
+            }
+
+            list.forEach(order => {
+                const isUnread = !order.readBy.includes(currentUser.id);
+                const progress = getProgress(order.status);
+                const statusClass = `status-${order.status}`;
+                const statusText = getStatusText(order.status);
+                const overdue = isOverdue(order);
+                
+                const titleName = order.engraving1?.name || order.customerName || 'Без имени';
+                
+                const div = document.createElement('div');
+                div.className = `order-item ${isUnread ? 'unread' : ''}`;
+                div.onclick = () => openOrderModal(order.id);
+                div.innerHTML = `
+                    <div class="order-top">
+                        <div style="flex: 1;">
+                            <div class="order-title">
+                                ${titleName} 
+                                ${overdue ? '<span class="status-badge badge-overdue">🔥 Просрочено</span>' : ''}
+                            </div>
+                            <div class="order-meta">
+                                № ${order.orderNumber} | ${order.customerName} ${order.phone ? '| 📞 ' + order.phone : ''}
+                            </div>
+                            <div class="order-badges">
+                                <span class="status-badge ${statusClass}">${statusText}</span>
+                                <span style="font-size: 0.8em; color: ${overdue ? 'var(--danger)' : '#7f8c8d'}; font-weight: ${overdue ? 'bold' : 'normal'};">
+                                    📅 Срок: ${new Date(order.manufactureDate).toLocaleDateString('ru-RU')}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${progress}%"></div></div>
+                            <div style="text-align: right; font-size: 0.75em; margin-top: 4px; color: #7f8c8d;">${progress}%</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function getProgress(status) {
+            const map = { 'new': 0, 'accepted': 25, 'manufacturing': 50, 'engraving': 75, 'ready': 100, 'closed': 100 };
+            return map[status] || 0;
+        }
+        function getStatusText(status) {
+            const map = { 'new': 'Новый', 'accepted': 'В работе', 'manufacturing': 'Изготовление', 'engraving': 'Гравировка', 'ready': 'Готов', 'closed': 'Закрыт' };
+            return map[status] || status;
+        }
+
+        function openOrderModal(orderId = null) {
+            document.getElementById('order-modal').style.display = 'flex';
+            document.getElementById('order-form').reset();
+            document.getElementById('engraving-2').classList.add('hidden');
+            document.getElementById('files-list').innerHTML = '';
+            document.getElementById('chat-box').innerHTML = '';
+            document.getElementById('order-history-list').innerHTML = '';
+            
+            tempFiles = [];
+            document.getElementById('initial-file-input').value = '';
+            renderTempFiles();
+
+            if (orderId) {
+                const order = orders.find(o => o.id === orderId);
+                if (!order.readBy.includes(currentUser.id)) {
+                    order.readBy.push(currentUser.id);
+                    saveData();
+                }
+                
+                document.getElementById('modal-title').textContent = `Заказ-наряд: ${order.orderNumber}`;
+                document.getElementById('order-id').value = order.id;
+                document.getElementById('order-number').value = order.orderNumber;
+                document.getElementById('manufacture-date').value = order.manufactureDate;
+                document.getElementById('customer-name').value = order.customerName;
+                document.getElementById('customer-phone').value = order.phone || '';
+                
+                document.getElementById('stele-size').value = order.monument.steleSize || '';
+                document.getElementById('base-size').value = order.monument.base || '';
+                document.getElementById('slab-size').value = order.monument.slabSize || '';
+                document.getElementById('stone-name').value = order.monument.stoneName || '';
+                
+                document.getElementById('eng-name-1').value = order.engraving1.name || '';
+                document.getElementById('eng-font-1').value = order.engraving1.font || '';
+                document.getElementById('eng-dob-1').value = order.engraving1.dob || '';
+                document.getElementById('eng-dod-1').value = order.engraving1.dod || '';
+                document.getElementById('eng-cross-1').checked = order.engraving1.hasCross || false;
+                
+                if (order.engraving2) {
+                    document.getElementById('engraving-2').classList.remove('hidden');
+                    document.getElementById('eng-name-2').value = order.engraving2.name || '';
+                    document.getElementById('eng-font-2').value = order.engraving2.font || '';
+                    document.getElementById('eng-dob-2').value = order.engraving2.dob || '';
+                    document.getElementById('eng-dod-2').value = order.engraving2.dod || '';
+                    document.getElementById('eng-cross-2').checked = order.engraving2.hasCross || false;
+                }                
+                document.getElementById('special-notes').value = order.specialNotes || '';
+                document.getElementById('order-status').value = order.status;
+                
+                document.getElementById('new-order-files-group').classList.add('hidden');
+                
+                const canEdit = currentUser.permissions.editAll || order.creatorId === currentUser.id || currentUser.permissions.manageUsers;
+                
+                if (canEdit) {
+                    document.getElementById('delete-order-btn').style.display = 'block';
+                    document.querySelectorAll('#order-form input, #order-form select, #order-form textarea').forEach(el => el.disabled = false);
+                } else {
+                    document.getElementById('delete-order-btn').style.display = 'none';
+                    document.querySelectorAll('#order-form input, #order-form select, #order-form textarea').forEach(el => el.disabled = true);
+                }
+
+                renderFiles(order);
+                renderChat(order);
+                renderOrderHistory(order);
+            } else {
+                document.getElementById('modal-title').textContent = 'Новый заказ-наряд';
+                document.getElementById('order-id').value = '';
+                document.getElementById('manufacture-date').valueAsDate = new Date();
+                document.getElementById('delete-order-btn').style.display = 'none';
+                document.querySelectorAll('#order-form input, #order-form select, #order-form textarea').forEach(el => el.disabled = false);
+                document.getElementById('new-order-files-group').classList.remove('hidden');
+            }
+            switchTab('details');
+        }
+
+        function closeOrderModal() {
+            document.getElementById('order-modal').style.display = 'none';
+            updateDashboard();
+            if (!document.getElementById('view-orders').classList.contains('hidden')) {
+                applyFilters();
+            }
+        }
+
+        function toggleSecondEngraving() {
+            document.getElementById('engraving-2').classList.toggle('hidden');
+        }
+
+        function handleInitialFileUpload(input) {
+            if (input.files.length > 0) {
+                for (let i = 0; i < input.files.length; i++) {
+                    const file = input.files[i];
+                    const sizeMB = file.size / (1024 * 1024);
+                    if (sizeMB > 200) {
+                        alert(`Файл "${file.name}" слишком большой! Макс. 200 МБ.`);
+                        continue;                    }
+                    tempFiles.push({
+                        name: file.name,
+                        size: sizeMB.toFixed(2) + ' МБ',
+                        date: new Date().toLocaleString(),
+                        uploadedBy: currentUser.name
+                    });
+                }
+                renderTempFiles();
+                input.value = '';
+            }
+        }
+
+        function renderTempFiles() {
+            const container = document.getElementById('temp-files-list');
+            container.innerHTML = '';
+            tempFiles.forEach((f, index) => {
+                container.innerHTML += `<div style="padding: 8px; background: #eaf2f8; margin-top: 5px; border-radius: 6px; font-size: 0.85em; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid var(--accent);">
+                    <span>📄 ${f.name} <span style="color: #7f8c8d;">(${f.size})</span></span>
+                    <button class="btn btn-danger btn-sm" onclick="removeTempFile(${index})">✕</button>
+                </div>`;
+            });
+        }
+
+        function removeTempFile(index) {
+            tempFiles.splice(index, 1);
+            renderTempFiles();
+        }
+
+        function saveOrder() {
+            const id = document.getElementById('order-id').value;
+            const customerName = document.getElementById('customer-name').value;
+            const engName1 = document.getElementById('eng-name-1').value;
+            
+            if (!customerName || !engName1) {
+                alert('ФИО Заказчика и ФИО на гравировке (1) обязательны!');
+                return;
+            }
+
+            let orderNumber = document.getElementById('order-number').value.trim();
+            let autoGenerated = false;
+            if (!orderNumber) {
+                orderNumber = 'ЗАК-' + Date.now().toString().slice(-6);
+                autoGenerated = true;
+            }
+
+            const orderData = {
+                id: id || 'ord_' + Date.now(),
+                orderNumber: orderNumber,
+                creatorId: id ? orders.find(o => o.id === id).creatorId : currentUser.id,                customerName: customerName,
+                phone: document.getElementById('customer-phone').value,
+                monument: {
+                    steleSize: document.getElementById('stele-size').value,
+                    base: document.getElementById('base-size').value,
+                    slabSize: document.getElementById('slab-size').value,
+                    stoneName: document.getElementById('stone-name').value
+                },
+                engraving1: {
+                    name: engName1,
+                    font: document.getElementById('eng-font-1').value,
+                    dob: document.getElementById('eng-dob-1').value,
+                    dod: document.getElementById('eng-dod-1').value,
+                    hasCross: document.getElementById('eng-cross-1').checked
+                },
+                engraving2: document.getElementById('engraving-2').classList.contains('hidden') ? null : {
+                    name: document.getElementById('eng-name-2').value,
+                    font: document.getElementById('eng-font-2').value,
+                    dob: document.getElementById('eng-dob-2').value,
+                    dod: document.getElementById('eng-dod-2').value,
+                    hasCross: document.getElementById('eng-cross-2').checked
+                },
+                specialNotes: document.getElementById('special-notes').value,
+                manufactureDate: document.getElementById('manufacture-date').value,
+                status: document.getElementById('order-status').value,
+                files: id ? orders.find(o => o.id === id).files : [...tempFiles],
+                chat: id ? orders.find(o => o.id === id).chat : [],
+                history: id ? orders.find(o => o.id === id).history : [],
+                readBy: id ? orders.find(o => o.id === id).readBy : [currentUser.id]
+            };
+
+            if (id) {
+                const oldOrder = orders.find(o => o.id === id);
+                const changes = getOrderChanges(oldOrder, orderData);
+                
+                if (changes.length > 0) {
+                    // Формируем детальный список изменений с переносами строк
+                    const changesHtml = changes.join('<br>• ');
+                    addHistory(orderData, `Обновил данные:<br>• ${changesHtml}`);
+                } else {
+                    addHistory(orderData, `Открыл и сохранил заказ без изменений`);
+                }
+                orderData.readBy = [currentUser.id]; 
+                const index = orders.findIndex(o => o.id === id);
+                orders[index] = orderData;
+            } else {
+                addHistory(orderData, `Создал новый заказ-наряд`);
+                orders.push(orderData);
+            }
+            saveData();
+            if (autoGenerated) alert(`Номер не был указан, присвоен автоматический: ${orderNumber}`);
+            closeOrderModal();
+        }
+
+        function deleteOrder() {
+            const id = document.getElementById('order-id').value;
+            if (confirm('Удалить этот заказ? Это действие необратимо.')) {
+                orders = orders.filter(o => o.id !== id);
+                saveData();
+                closeOrderModal();
+                applyFilters();
+            }
+        }
+
+        function addHistory(order, action) {
+            order.history.push({
+                userId: currentUser.id,
+                userName: currentUser.name,
+                action: action,
+                date: new Date().toISOString()
+            });
+        }
+
+        function handleFileUpload(input) {
+            if (input.files.length > 0) {
+                const file = input.files[0];
+                const sizeMB = file.size / (1024 * 1024);
+                if (sizeMB > 200) {
+                    alert('Файл слишком большой! Макс. 200 МБ.');
+                    input.value = '';
+                    return;
+                }
+                
+                const id = document.getElementById('order-id').value;
+                const order = orders.find(o => o.id === id);
+                
+                order.files.push({
+                    name: file.name,
+                    size: sizeMB.toFixed(2) + ' МБ',
+                    date: new Date().toLocaleString(),
+                    uploadedBy: currentUser.name
+                });
+                
+                addHistory(order, `Добавил файл: ${file.name}`);
+                order.readBy = [currentUser.id];
+                saveData();
+                renderFiles(order);
+                input.value = '';
+            }        }
+
+        function renderFiles(order) {
+            const container = document.getElementById('files-list');
+            container.innerHTML = '<b style="font-size: 0.9em; color: #555;">📎 Прикрепленные файлы:</b><br>';
+            if (order.files.length === 0) container.innerHTML += '<span style="color: #95a5a6; font-size: 0.9em;">Нет файлов</span>';
+            
+            order.files.forEach(f => {
+                container.innerHTML += `<div style="padding: 8px; background: #f8f9fa; margin-top: 8px; border-radius: 6px; font-size: 0.85em; border-left: 3px solid var(--accent);">📄 ${f.name} <span style="color: #7f8c8d;">(${f.size})</span> — <i>${f.uploadedBy}</i></div>`;
+            });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-message');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            const id = document.getElementById('order-id').value;
+            const order = orders.find(o => o.id === id);
+            
+            order.chat.push({
+                userId: currentUser.id,
+                userName: currentUser.name,
+                text: text,
+                date: new Date().toLocaleString()
+            });
+            
+            addHistory(order, `Написал сообщение в чат`);
+            order.readBy = [currentUser.id];
+            saveData();
+            
+            input.value = '';
+            renderChat(order);
+        }
+
+        function renderChat(order) {
+            const box = document.getElementById('chat-box');
+            box.innerHTML = '';
+            if (order.chat.length === 0) {
+                box.innerHTML = '<div style="text-align: center; color: #95a5a6; margin-top: 20px;">История сообщений пуста</div>';
+            }
+            order.chat.forEach(msg => {
+                const isMe = msg.userId === currentUser.id;
+                const div = document.createElement('div');
+                div.className = `chat-message ${isMe ? 'me' : ''}`;
+                div.innerHTML = `
+                    <div class="chat-header">
+                        <b>${isMe ? 'Вы' : msg.userName}</b>
+                        <span>${msg.date}</span>
+                    </div>                    <div style="word-wrap: break-word;">${msg.text}</div>
+                `;
+                box.appendChild(div);
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function renderOrderHistory(order) {
+            const container = document.getElementById('order-history-list');
+            container.innerHTML = '';
+            if (order.history.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #95a5a6;">История пуста</div>';
+            }
+            // Сортируем от новых к старым
+            order.history.slice().reverse().forEach(h => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                // action может содержать HTML (разрывы строк для детализации)
+                div.innerHTML = `<span class="history-time">${new Date(h.date).toLocaleString()}</span> <b>${h.userName}</b>:<br>${h.action}`;
+                container.appendChild(div);
+            });
+        }
+
+        function printOrder() {
+            const id = document.getElementById('order-id').value;
+            if (!id) { alert('Сначала сохраните заказ'); return; }
+            const o = orders.find(x => x.id === id);
+            
+            const printArea = document.getElementById('print-area');
+            const eng2Html = o.engraving2 ? `
+                <div class="print-section">
+                    <h3>Граверные работы (Дополнительно)</h3>
+                    <div class="print-row"><span class="print-label">ФИО:</span> <span>${o.engraving2.name || '—'}</span></div>
+                    <div class="print-row"><span class="print-label">Шрифт:</span> <span>${o.engraving2.font || '—'}</span></div>
+                    <div class="print-row"><span class="print-label">Даты:</span> <span>${o.engraving2.dob || '...'} — ${o.engraving2.dod || '...'}</span></div>
+                    <div class="print-row"><span class="print-label">Крестик:</span> <span>${o.engraving2.hasCross ? 'Да' : 'Нет'}</span></div>
+                </div>
+            ` : '';
+
+            printArea.innerHTML = `
+                <div class="print-header">
+                    <h2>ЗАКАЗ-НАРЯД № ${o.orderNumber}</h2>
+                    <p>Дата формирования: ${new Date().toLocaleDateString('ru-RU')}</p>
+                </div>
+                <div class="print-section">
+                    <h3>Информация о заказчике</h3>
+                    <div class="print-row"><span class="print-label">ФИО:</span> <span>${o.customerName}</span></div>
+                    <div class="print-row"><span class="print-label">Телефон:</span> <span>${o.phone || 'Не указан'}</span></div>
+                    <div class="print-row"><span class="print-label">Плановая дата изготовления:</span> <span><b>${new Date(o.manufactureDate).toLocaleDateString('ru-RU')}</b></span></div>
+                </div>                <div class="print-section">
+                    <h3>Комплектация памятника</h3>
+                    <div class="print-row"><span class="print-label">Камень:</span> <span>${o.monument.stoneName || 'Не указан'}</span></div>
+                    <div class="print-row"><span class="print-label">Стелла (размер):</span> <span>${o.monument.steleSize || '—'}</span></div>
+                    <div class="print-row"><span class="print-label">Подставка (размер):</span> <span>${o.monument.base || '—'}</span></div>
+                    <div class="print-row"><span class="print-label">Плита/Надгробка:</span> <span>${o.monument.slabSize || '—'}</span></div>
+                </div>
+                <div class="print-section">
+                    <h3>Граверные работы (Основная)</h3>
+                    <div class="print-row"><span class="print-label">ФИО:</span> <span><b>${o.engraving1.name}</b></span></div>
+                    <div class="print-row"><span class="print-label">Шрифт:</span> <span>${o.engraving1.font || 'Стандартный'}</span></div>
+                    <div class="print-row"><span class="print-label">Даты:</span> <span>${o.engraving1.dob || '...'} — ${o.engraving1.dod || '...'}</span></div>
+                    <div class="print-row"><span class="print-label">Крестик:</span> <span>${o.engraving1.hasCross ? 'Да' : 'Нет'}</span></div>
+                </div>
+                ${eng2Html}
+                ${o.specialNotes ? `<div class="print-section"><h3>Особые отметки</h3><p style="font-size: 14px; line-height: 1.5;">${o.specialNotes}</p></div>` : ''}
+                <div class="print-signatures">
+                    <div class="sig-line">Менеджер: _________________ / ${currentUser.name}</div>
+                    <div class="sig-line">Производство: _________________ / _________________</div>
+                </div>
+            `;
+            window.print();
+        }
+
+        function renderAdminPanel() {
+            const container = document.getElementById('users-list');
+            container.innerHTML = '';
+            users.forEach(u => {
+                const div = document.createElement('div');
+                div.style.cssText = 'padding: 15px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: white;';
+                
+                let permsText = [];
+                permsText.push(u.permissions.viewAll ? "Видит: <b style='color:var(--accent)'>Все</b>" : "Видит: <b>Только свои</b>");
+                permsText.push(u.permissions.editAll ? "Ред.: <b style='color:var(--accent)'>Все</b>" : "Ред.: <b>Только свои</b>");
+                if (u.permissions.manageUsers) permsText.push("Админ");
+
+                div.innerHTML = `
+                    <div>
+                        <div style="font-weight: bold; font-size: 1.05em;">${u.name}</div>
+                        <div style="font-size: 0.85em; color: #7f8c8d;">Логин: <b>${u.username}</b> | ${permsText.join(' | ')}</div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-primary btn-sm" onclick="editUser('${u.id}')">✏️ Изменить</button>
+                        ${u.username !== 'admin' ? `<button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">🗑</button>` : ''}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        function resetUserForm() {
+            document.getElementById('editing-user-id').value = '';
+            document.getElementById('new-user-login').value = '';
+            document.getElementById('new-user-pass').value = '';
+            document.getElementById('new-user-name').value = '';
+            
+            document.getElementById('perm-view-own').checked = true;
+            document.getElementById('perm-edit-own').checked = true;
+            document.getElementById('perm-manage-users').checked = false;
+            
+            document.getElementById('user-form-title').textContent = 'Создание нового пользователя';
+            document.getElementById('cancel-edit-btn').style.display = 'none';
+            document.getElementById('new-user-login').disabled = false;
+        }
+
+        function editUser(id) {
+            const u = users.find(x => x.id === id);
+            if (!u) return;
+
+            document.getElementById('editing-user-id').value = u.id;
+            document.getElementById('new-user-login').value = u.username;
+            document.getElementById('new-user-pass').value = u.password;
+            document.getElementById('new-user-name').value = u.name;
+            
+            document.querySelector(`input[name="perm-view"][value="${u.permissions.viewAll ? 'all' : 'own'}"]`).checked = true;
+            document.querySelector(`input[name="perm-edit"][value="${u.permissions.editAll ? 'all' : 'own'}"]`).checked = true;
+            document.getElementById('perm-manage-users').checked = u.permissions.manageUsers;
+            
+            document.getElementById('user-form-title').textContent = 'Редактирование пользователя';
+            document.getElementById('cancel-edit-btn').style.display = 'block';
+            document.getElementById('new-user-login').disabled = true;
+        }
+
+        function saveUser() {
+            const editId = document.getElementById('editing-user-id').value;
+            const username = document.getElementById('new-user-login').value.trim();
+            const password = document.getElementById('new-user-pass').value.trim();
+            const name = document.getElementById('new-user-name').value.trim();
+            
+            if (!username || !password || !name) {
+                alert('Заполните все обязательные поля');
+                return;
+            }
+            
+            if (!editId && users.find(u => u.username === username)) {
+                alert('Пользователь с таким логином уже существует');
+                return;
+            }
+            
+            const viewAll = document.querySelector('input[name="perm-view"]:checked').value === 'all';            const editAll = document.querySelector('input[name="perm-edit"]:checked').value === 'all';
+            const manageUsers = document.getElementById('perm-manage-users').checked;
+            
+            const userData = {
+                id: editId || 'u_' + Date.now(),
+                username: username,
+                password: password,
+                name: name,
+                permissions: { viewAll, editAll, manageUsers }
+            };
+            
+            if (editId) {
+                const index = users.findIndex(u => u.id === editId);
+                users[index] = userData;
+                if (currentUser.id === editId) currentUser = userData;
+            } else {
+                users.push(userData);
+            }
+            
+            localStorage.setItem('crm_users', JSON.stringify(users));
+            resetUserForm();
+            renderAdminPanel();
+            alert(editId ? 'Данные обновлены' : 'Пользователь создан');
+        }
+
+        function deleteUser(id) {
+            if (confirm('Удалить пользователя? Созданные им заказы останутся.')) {
+                users = users.filter(u => u.id !== id);
+                localStorage.setItem('crm_users', JSON.stringify(users));
+                renderAdminPanel();
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        function saveData() {
+            localStorage.setItem('crm_orders', JSON.stringify(orders));
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('order-modal');
+            if (event.target === modal) closeOrderModal();
+        }
+        
+        document.addEventListener('click', function(event) {            const sidebar = document.getElementById('sidebar');
+            const toggles = document.querySelectorAll('.menu-toggle');
+            let clickedToggle = false;
+            toggles.forEach(t => { if (t.contains(event.target)) clickedToggle = true; });
+
+            if (window.innerWidth <= 768 && sidebar.classList.contains('open') && 
+                !sidebar.contains(event.target) && !clickedToggle) {
+                sidebar.classList.remove('open');
+            }
+        });
+    </script>
+</body>
+</html>
